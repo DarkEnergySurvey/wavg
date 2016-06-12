@@ -1,0 +1,79 @@
+computewavg.py is a python script (depends on esheldon's fitsio, and numpy)
+which takes as input a coadd-catalog (for one filter for one tile) and
+a list of spatially overlapping single-epoch object catalogs and matches
+them up, and computes a WAVG[ERR]_MAG_PSF,  SPREAD[ERR]_MODEL quantities
+for each object in the coadd-catalog.  A quantitiy NEPOCHS is also
+returned for each coadd object, indicating the number of single epoch
+detections which match it.  If no single-epoch objects match
+the coadd-catalog (for instance the coadd object is very faint and not
+detected in any single epoch overlapping catalog, then NEPOCHS is 0 and
+then WAVG_MAG[ERR]_PSF := MAG[ERR]_PSF and WAVG_SPREAD[ERR]_MODEL := SPREAD[ERR]_MODEL where the latter are taken unchanged from the COADD OBJECT
+catalog.
+
+The formula for computing weighted average quantities is a standard one,
+such as may be found at:
+https://en.wikipedia.org/wiki/Weighted_arithmetic_mean
+
+Note that magnitudes are averaged, and not fluxes, introducing
+a small bias for faint objects.
+
+Outlier rejection:  single epoch entries which have FLAGS >=4 or 
+IMAFLAGS_ISO != 0 are left out of the weighted average set.  
+
+The current command line is as follows:
+
+Testing was done with finalcut Y2A1+5 stack, which has these products and
+dependencies:
+python 2.7.9
+numpy 1.9.1+4
+fitsio 0.9.8rc1+3 
+	
+--------------
+
+
+python computewavg.py RXJ2248/list/RXJ2248_Y_sci.list RXJ2248 RXJ2248/cat/RXJ2248_Y_cat.fits out2248_Y.fits outoc_2248_Y.fits 25 RXJ2248_Y_cat.fits
+
+
+Where the arguments in order are:
+
+1. list of tile-overlapping single epoch images,zeropoints_for_that_image
+(the current code converts the single-epoch image name to a catalog name
+by substituting immask --> red-fullcat and red/ --> cat/ in the directory path)
+	This will change probably to accepting a list of single epoch
+	catalogs, a subset of those used in the astrorefine step which
+	actually have overlap with the coadd tile, and zeropoints.
+	
+
+2. name of the coadd tile, i.e. RXJ2248,  DES2257-1235, etc
+
+3. path and filename of the coadd catalog file, i.e. cat/RXJ2248_Y_cat.fits
+
+
+4. name of the output WAVG COADD file, i.e. RXJ2248_Y_wavg_cat.fits
+	This binary fits table has columns:
+	NUMBER (coadd object id number 1..N, same as SExtractor catalog
+	for this tile/filter, in same order, ever number 1..N is included)
+	NEPOCHS
+	WAVG_MAG_PSF
+	WAVG_MAGERR_PSF
+	WAVG_SPREAD_MODEL
+	WAVG_SPREADERR_MODEL
+
+5. name of the output COADD_OBJECT-SE_OBJECT matchup cross-id file,
+	i.e. RXJ2248_Y_oc_cat.fits
+	This fits binary table file has a set of quadruples: (coadd_filename,coadd_number,object_filename,object_number)  which should be usable to get a unique coadd_object_id to add to the SE_OBJECT table for all single epoch objects which have a
+	coadd_object match (many do not, their coadd_object_id value
+	will presumably remain null).
+
+
+
+6 Reference MAG_ZERO for the single epoch catalogs... This is ususally 25.0
+for sextractor Reference MAG_ZERO for the single epoch catalogs... This is ususally 25.0  from sextractor defaults.
+
+7.  The input coadd catalog filename (without the path) for use in 5. above.
+
+-----------
+
+
+
+
