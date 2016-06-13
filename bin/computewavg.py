@@ -5,6 +5,7 @@ import fitsio
 import numpy
 import subprocess
 import math
+import argparse
 
 def Usage():
 	sys.exit("computewavg list tile coaddcat outcoaddname outocname refmagzero coaddcatinname")
@@ -61,7 +62,7 @@ def readcoaddcat(filename,elems):
 
   return (cd,cindex)
 
-def readlists(list,tile,elems,hdrelems):
+def readlists(lists,sublistdirprefix,elems,hdrelems):
 	od={}
 	for e in elems+hdrelems:
 	 od[e] = []
@@ -70,84 +71,91 @@ def readlists(list,tile,elems,hdrelems):
 	od['MAG_ZERO'] = []
 	od['COADD_NUMBER'] = []
 
-	with open(list) as f:
-	 for line in f:
-	  #print line
+        alllists=lists.split(',')
+        for list in alllists:
+	 with open(list) as f:
+	  for line in f:
+	   #print line
 
-  	  a=line.split('/')[1]
-  	  #print a
-  	  b=a.split(',')[0]
-	  zeropoint=float(a.split(',')[1])
-  	  #print b
-          c=b.split('_')
-          expnumstring=c[0]
-          nband=c[1]
-          ccdstring=c[2]
-          rpstring=c[3]
-          pstring=c[3].split('p')[1]
-	  filename= expnumstring+'_'+nband+'_'+ccdstring+'_'+rpstring+'_red-fullcat.fits'
-	  getname=tile+'/cat/'+filename
+	   if sublistdirprefix == 'none' or sublistdirprefix == 'None' or sublistdirprefix == 'NONE':
+  	     getname=line.split(',')[0]
+	     filename=getname.split('/')[-1]
+	     zeropoint=float(line.split(',')[1])
+	   else:
+  	     a=line.split('/')[1]
+  	     #print a
+  	     b=a.split(',')[0]
+	     zeropoint=float(a.split(',')[1])
+  	     #print b
+             c=b.split('_')
+             expnumstring=c[0]
+             nband=c[1]
+             ccdstring=c[2]
+             rpstring=c[3]
+             pstring=c[3].split('p')[1]
+	     filename= expnumstring+'_'+nband+'_'+ccdstring+'_'+rpstring+'_red-fullcat.fits'
+	     getname=sublistdirprefix+'/'+filename
 
-	  fits=fitsio.FITS(getname.strip(),namemode='r')
+	   fits=fitsio.FITS(getname.strip(),namemode='r')
 
-	  hdu=0
-	  h=fits[hdu].read_header()
+	   hdu=0
+	   h=fits[hdu].read_header()
 
-	  table = fits[hdu+2].read()
+	   table = fits[hdu+2].read()
 
-	  #these are arrays
+	   #these are arrays
 
-	  sizetable = table['NUMBER'].size
+	   sizetable = table['NUMBER'].size
 
-	  for e in elems:
-	   od[e] += table[e].tolist()
+	   for e in elems:
+	    od[e] += table[e].tolist()
 
-	  od['RA'] = od['ALPHAWIN_J2000']
+	   od['RA'] = od['ALPHAWIN_J2000']
  
-	  for he in hdrelems:
-	   od[he] += [h[he]]*sizetable
+	   for he in hdrelems:
+	    od[he] += [h[he]]*sizetable
 	  
 
-	  od['FILENAME'] += [filename]*sizetable
-	  od['MAG_ZERO'] += [zeropoint]*sizetable
-	  od['COADD_NUMBER'] += [0]*sizetable
+	   od['FILENAME'] += [filename]*sizetable
+	   od['MAG_ZERO'] += [zeropoint]*sizetable
+	   od['COADD_NUMBER'] += [0]*sizetable
 
-	  #print ra,dec,flux_psf
-          #print ra[0],dec[0],flux_psf[0],expnum,ccdnum,ra.size,zeropoint,aband
+	   #print ra,dec,flux_psf
+           #print ra[0],dec[0],flux_psf[0],expnum,ccdnum,ra.size,zeropoint,aband
 
 	 #for e in elems+hdrelems:
 	  #print e,len(od[e])
 	 #print 'MAG_ZERO',len(od['MAG_ZERO'])
 	 #print 'COADD_NUMBER',len(od['COADD_NUMBER'])
 
-         nra = numpy.array(od['ALPHAWIN_J2000'])
-	 oindex = nra.argsort()
+          nra = numpy.array(od['ALPHAWIN_J2000'])
+	  oindex = nra.argsort()
 
-	 #don't forget about the RA-360 for RA>350 wraparound.
-  	 if od['ALPHAWIN_J2000'][oindex[0]] < 10 and od['ALPHAWIN_J2000'][oindex[len(oindex)-1]] > 350:
-	    od['RA'] = od['ALPHAWIN_J2000'] if od['ALPHAWIN_J2000'] < 350 else od['ALPHAWIN_J2000'] - 360.0
+	  #don't forget about the RA-360 for RA>350 wraparound.
+  	  if od['ALPHAWIN_J2000'][oindex[0]] < 10 and od['ALPHAWIN_J2000'][oindex[len(oindex)-1]] > 350:
+	     od['RA'] = od['ALPHAWIN_J2000'] if od['ALPHAWIN_J2000'] < 350 else od['ALPHAWIN_J2000'] - 360.0
 
-         nra = numpy.array(od['RA'])
-	 oindex = nra.argsort()
+          nra = numpy.array(od['RA'])
+	  oindex = nra.argsort()
 
-	 #print od['RA'][oindex[0]],od['RA'][oindex[1]],od['RA'][oindex[100000]]
-	 #print onumber
+	  #print od['RA'][oindex[0]],od['RA'][oindex[1]],od['RA'][oindex[100000]]
+	  #print onumber
     
 
 	return (od,oindex)
 
 
-def solvsort(cd,cindex,od,oindex,refmag0):
+def solvsort(cd,cindex,od,oindex,refmag0,matchradius):
 
   #takes two ra-sorted lists runs down the first list, flags matches to all things in the second within 1''
 
   totmatches=0
   sizec=len(cindex)
   sizeo=len(oindex)
-  print sizec,sizeo
+  print "Size of Coadd Catalog:",sizec,"Total number of SE objects in lists:",sizeo
   topo=0
   curc=0
-  tol=0.7/3600.0
+  tol=float(matchradius)/3600.0
   tolsq=tol*tol
   tol2=3*tol
   dtr=3.14159/180
@@ -220,21 +228,23 @@ def solvsort(cd,cindex,od,oindex,refmag0):
       cd['WAVG_SPREADERR_MODEL'][cindex[curc]] = wavg_spreaderr_model
     curc += 1
       
-  print "totmatches:",totmatches
+  print "Number of SE objects matched to a Coadd object:",totmatches
 
 
 def joinup(cd,cindex,od,oindex,outcoaddname,outocname,coaddcat):
 
   sizec=len(cindex)
   sizeo=len(oindex)
-  print sizec,sizeo
+  #print sizec,sizeo
 
   ne=numpy.array(cd['NEPOCHS'])
-  for ii in range(0,11):
+  print "Distribution of NEPOCHS"
+  print "NEPOCHs, Count(Coadd Objects with NEPOCHs)"
+
+  for ii in range(0,21):
    print ii,ne[numpy.where(ne==ii)].size
 
-  print ">10",ne[numpy.where(ne>10)].size
-
+  print ">20",ne[numpy.where(ne>10)].size
 
   #write out the table as a FITS file in order of NUMBER in the COADD catalog
 
@@ -257,7 +267,7 @@ def joinup(cd,cindex,od,oindex,outcoaddname,outocname,coaddcat):
   nf=numpy.array(od['FILENAME'])
   nfid=nf[numpy.where(ne!=0)]
 
-  print "non-zero coadd_number:",ne[numpy.where(ne!=0)].size
+  print "SE Objects with non-null coadd_number:",ne[numpy.where(ne!=0)].size
 
   nocrows=necid.size
   outocdata=numpy.zeros(nocrows,dtype=[('COADD_FILENAME','a72'),('COADD_NUMBER','i4'),('FILENAME','a60'),('NUMBER','i4')])
@@ -348,25 +358,29 @@ def onebanderrs(workdict,refmag0):
 
 #END OF ONEBANDERRS
 
-def computewavg(listname,tile,coaddcat,outcoaddname,outocname,refmag0,coaddcatname):
+parser=argparse.ArgumentParser()
+parser.add_argument("incoaddcat",help="Filename of the input coadd fits catalog (with no path). Also used as part of unique coadd object identifier.")
+parser.add_argument("catlists",help="List(s) of single epoch catalogs overlapping the tile.")
+parser.add_argument("outwavgcat",help="filename of the output fits file with wavg quantities.")
+parser.add_argument("outoclinkcat",help="filename of the output fits file with coadd_object ids for each object id that matches a coadd_object.")
+parser.add_argument("--dircoaddcat",help="directory containing the coadd catalog file (defaults to current dir .)",default=".")
+parser.add_argument("--sublistdirprefix",help="perform a substitution on the list directory changing red/ to sublistdirprefix/cat/ and immasked --> red-fullcat containing the coadd catalog file (defaults to no substitution in list)",default="none")
+parser.add_argument("--refmag0",help="sextractor single epoch reference magnitude (default 25.0)",default=25.0)
+parser.add_argument("--matchradius",help="match radius in arcsec for single obj, coadd obj matching (default 0.7)", default=0.7)
+args=parser.parse_args()
 
-  #grabredfullcats(listname)
+#fetch of catalogs not used now -- assumed to be present in working area
+#grabredfullcats(listname)
 
-  elems = ['NUMBER','ALPHAWIN_J2000','DELTAWIN_J2000','FLUX_PSF','FLUXERR_PSF','SPREAD_MODEL','SPREADERR_MODEL','FLAGS','IMAFLAGS_ISO','MAG_PSF','MAGERR_PSF']
-  hdrelems = ['BAND','CCDNUM','EXPNUM']
+elems = ['NUMBER','ALPHAWIN_J2000','DELTAWIN_J2000','FLUX_PSF','FLUXERR_PSF','SPREAD_MODEL','SPREADERR_MODEL','FLAGS','IMAFLAGS_ISO','MAG_PSF','MAGERR_PSF']
 
-  (cd,cindex) = readcoaddcat(coaddcat,elems)
+hdrelems = ['BAND','CCDNUM','EXPNUM']
 
-  (od,oindex) = readlists(listname,tile,elems,hdrelems)
+(cd,cindex) = readcoaddcat(args.dircoaddcat+'/'+args.incoaddcat,elems)
 
-  solvsort(cd,cindex,od,oindex,refmag0)
-  joinup(cd,cindex,od,oindex,outcoaddname,outocname,coaddcatname)
+(od,oindex) = readlists(args.catlists,args.sublistdirprefix,elems,hdrelems)
 
-  #writeout()
+solvsort(cd,cindex,od,oindex,args.refmag0,args.matchradius)
+joinup(cd,cindex,od,oindex,args.outwavgcat,args.outoclinkcat,args.incoaddcat)
 
-
-if __name__ == "__main__":
-  if len(sys.argv[1:]) < 7 or (sys.argv[1] == '-h'):
-     Usage()
-  computewavg(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5],sys.argv[6],sys.argv[7])
-
+#done

@@ -28,28 +28,44 @@ python 2.7.9
 numpy 1.9.1+4
 fitsio 0.9.8rc1+3 
 	
+If it's cut as a product (currently in SVN wav wavg product, in the trunk.) 
+svn co https://dessvn.cosmology.illinois.edu/svn/desdm/devel/wavg/trunk wavg-trunk
+
+one then:
+
+setup wavg <version>
 --------------
 
+A command line call is as follows:
 
-python computewavg.py RXJ2248/list/RXJ2248_Y_sci.list RXJ2248 RXJ2248/cat/RXJ2248_Y_cat.fits out2248_Y.fits outoc_2248_Y.fits 25 RXJ2248_Y_cat.fits
+usage: computewavg.py [-h] [--dircoaddcat DIRCOADDCAT]
+                      [--sublistdirprefix SUBLISTDIRPREFIX]
+                      [--refmag0 REFMAG0] [--matchradius MATCHRADIUS]
+                      incoaddcat catlists outwavgcat outoclinkcat
+
+
+computewavg.py RXJ2248_z_cat.fits RXJ2248/list/RXJ2248_z_sci.list wavg_z.fits oc_z.fits \
+	--dircoaddcat RXJ2248/cat --sublistdirprefix RXJ2248/cat
 
 
 Where the arguments in order are:
 
-1. list of tile-overlapping single epoch images,zeropoints_for_that_image
+1.  The input coadd catalog filename (without the path)  just made by coadd
+ 	pipeline in earlier steps for this filter.
+
+	add --dircoaddcat <path_to_input_coadd_catalog> if this file is not in the $CWD ('.').
+
+2. list(s) of tile-overlapping single epoch images,zeropoints_for_that_image
 (the current code converts the single-epoch image name to a catalog name
-by substituting immask --> red-fullcat and red/ --> cat/ in the directory path)
-	This will change probably to accepting a list of single epoch
-	catalogs, a subset of those used in the astrorefine step which
-	actually have overlap with the coadd tile, and zeropoints.
+by substituting immask --> red-fullcat and red/ --> --sublistdirprefix/ in the directory path)
+	For the 'det' filter case, you can have a set of three lists separated
+		by commas representing the r,i and z lists
+	If you leave --sublistdirprefix off, then it won't manipulate the
+		lists and will use them 'as-is' looking for
+		red-fullcat.fits,zeropoint pairs in each line of the lists.
 	
 
-2. name of the coadd tile, i.e. RXJ2248,  DES2257-1235, etc
-
-3. path and filename of the coadd catalog file, i.e. cat/RXJ2248_Y_cat.fits
-
-
-4. name of the output WAVG COADD file, i.e. RXJ2248_Y_wavg_cat.fits
+3. name of the output WAVG COADD file, i.e. RXJ2248_Y_wavg_cat.fits
 	This binary fits table has columns:
 	NUMBER (coadd object id number 1..N, same as SExtractor catalog
 	for this tile/filter, in same order, ever number 1..N is included)
@@ -59,21 +75,35 @@ by substituting immask --> red-fullcat and red/ --> cat/ in the directory path)
 	WAVG_SPREAD_MODEL
 	WAVG_SPREADERR_MODEL
 
-5. name of the output COADD_OBJECT-SE_OBJECT matchup cross-id file,
+4. name of the output COADD_OBJECT-SE_OBJECT matchup cross-id file,
 	i.e. RXJ2248_Y_oc_cat.fits
-	This fits binary table file has a set of quadruples: (coadd_filename,coadd_number,object_filename,object_number)  which should be usable to get a unique coadd_object_id to add to the SE_OBJECT table for all single epoch objects which have a
+	This fits binary table file has a set of quadruples: 
+	(coadd_filename,coadd_number,object_filename,object_number)  which should be usable 
+	to get a unique coadd_object_id to add to the SE_OBJECT table for all single epoch objects which have a
 	coadd_object match (many do not, their coadd_object_id value
 	will presumably remain null).
 
 
+Other optional arguments (probably don't need to change:)
 
-6 Reference MAG_ZERO for the single epoch catalogs... This is ususally 25.0
-for sextractor Reference MAG_ZERO for the single epoch catalogs... This is ususally 25.0  from sextractor defaults.
+--refmag0 25.0	(sextractor's single epoch magnitude reference zeropoint)
 
-7.  The input coadd catalog filename (without the path) for use in 5. above.
+--matchradius 0.7 (match radius in arcsec, 1.0 is a bit too big, 0.7 seems to
+work well)
 
 -----------
 
 
+
+computewavg.py RXJ2248_g_cat.fits RXJ2248/list/RXJ2248_g_sci.list wavg_g.fits oc_g.fits --dircoaddcat RXJ2248/cat --sublistdirprefix RXJ2248/cat
+computewavg.py RXJ2248_r_cat.fits RXJ2248/list/RXJ2248_r_sci.list wavg_r.fits oc_r.fits --dircoaddcat RXJ2248/cat --sublistdirprefix RXJ2248/cat
+computewavg.py RXJ2248_i_cat.fits RXJ2248/list/RXJ2248_i_sci.list wavg_i.fits oc_i.fits --dircoaddcat RXJ2248/cat --sublistdirprefix RXJ2248/cat
+computewavg.py RXJ2248_z_cat.fits RXJ2248/list/RXJ2248_z_sci.list wavg_z.fits oc_z.fits --dircoaddcat RXJ2248/cat --sublistdirprefix RXJ2248/cat
+computewavg.py RXJ2248_Y_cat.fits RXJ2248/list/RXJ2248_z_sci.list wavg_z.fits oc_z.fits --dircoaddcat RXJ2248/cat --sublistdirprefix RXJ2248/cat
+computewavg.py RXJ2248_det_cat.fits RXJ2248/list/RXJ2248_r_sci.list,RXJ2248/list/RXJ2248_i_sci.list,RXJ2248/list/RXJ2248_z_sci.list wavg_det.fits junkit.fits --dircoaddcat RXJ2248/cat --sublistdirprefix RXJ2248/cat
+
+Note that the oc matching images for the det filter (called junkit.fits here)
+should *not* be ingested into the database since it will overwrite r,i,z
+matches from before, which we don't want.
 
 
