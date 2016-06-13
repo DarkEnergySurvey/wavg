@@ -30,8 +30,8 @@ def grabredfullcats(list):
 def readcoaddcat(filename,elems):
 
   f=fitsio.FITS(filename,namemode='r')
-  #This may have to be changed from HDU=2 to HDU=1
-  t=f[2].read()
+  #This may have to be changed from HDU=1 to HDU=2
+  t=f[1].read()
  
   cd = {}
   for e in elems:
