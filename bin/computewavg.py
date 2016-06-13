@@ -372,7 +372,7 @@ args=parser.parse_args()
 #fetch of catalogs not used now -- assumed to be present in working area
 #grabredfullcats(listname)
 
-elems = ['NUMBER','ALPHAWIN_J2000','DELTAWIN_J2000','FLUX_PSF','FLUXERR_PSF','SPREAD_MODEL','SPREADERR_MODEL','FLAGS','IMAFLAGS_ISO','MAG_PSF','MAGERR_PSF']
+elems = ['NUMBER','ALPHAWIN_J2000','DELTAWIN_J2000','SPREAD_MODEL','SPREADERR_MODEL','FLAGS','IMAFLAGS_ISO','MAG_PSF','MAGERR_PSF']
 
 hdrelems = ['BAND','CCDNUM','EXPNUM']
 
