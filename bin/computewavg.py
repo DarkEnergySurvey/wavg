@@ -27,15 +27,16 @@ def grabredfullcats(list):
    subprocess.check_output(['wget',getname])
    
 
-def readcoaddcat(filename,elems):
+def readcoaddcat(filename,elems,hduforcoaddcat):
 
   f=fitsio.FITS(filename,namemode='r')
   #This may have to be changed from HDU=1 to HDU=2
-  t=f[1].read()
+  t=f[int(hduforcoaddcat)].read()
  
   cd = {}
   for e in elems:
     cd[e] = t[e]
+
 
   cd['RA']=cd['ALPHAWIN_J2000']
   cd['NEPOCHS']=[0]*len(cd['RA'])
@@ -249,6 +250,7 @@ def joinup(cd,cindex,od,oindex,outcoaddname,outocname,coaddcat):
   #write out the table as a FITS file in order of NUMBER in the COADD catalog
 
   nrows=cd['NUMBER'].size
+  band=od['BAND'][0]
 
   outdata=numpy.zeros(nrows,dtype=[('NUMBER','i4'),('NEPOCHS','i4'),('WAVG_MAG_PSF','f4'),('WAVG_MAGERR_PSF','f4'),('WAVG_SPREAD_MODEL','f4'),('WAVG_SPREADERR_MODEL','f4')])
   outdata['NUMBER']=cd['NUMBER']
@@ -257,7 +259,11 @@ def joinup(cd,cindex,od,oindex,outcoaddname,outocname,coaddcat):
   outdata['WAVG_MAGERR_PSF']=cd['WAVG_MAGERR_PSF']
   outdata['WAVG_SPREAD_MODEL']=cd['WAVG_SPREAD_MODEL']
   outdata['WAVG_SPREADERR_MODEL']=cd['WAVG_SPREADERR_MODEL']
-  fitsio.write(outcoaddname,outdata,clobber=True)
+
+  hlist=[{'name':'BAND','value':band}]
+  fhdr=fitsio.FITSHDR(hlist)
+
+  fitsio.write(outcoaddname,outdata,header=fhdr,extname='OBJECTS',clobber=True)
 
   #writeout the oc matching file:
   ne=numpy.array(od['COADD_NUMBER'])
@@ -275,7 +281,7 @@ def joinup(cd,cindex,od,oindex,outcoaddname,outocname,coaddcat):
   outocdata['COADD_NUMBER']=necid
   outocdata['FILENAME']=nfid
   outocdata['NUMBER']=neoid
-  fitsio.write(outocname,outocdata,clobber=True)
+  fitsio.write(outocname,outocdata,extname='OBJECTS',header=fhdr,clobber=True)
 
 def onebanderrs(workdict,refmag0):
 
@@ -367,6 +373,7 @@ parser.add_argument("--dircoaddcat",help="directory containing the coadd catalog
 parser.add_argument("--sublistdirprefix",help="perform a substitution on the list directory changing red/ to sublistdirprefix/cat/ and immasked --> red-fullcat containing the coadd catalog file (defaults to no substitution in list)",default="none")
 parser.add_argument("--refmag0",help="sextractor single epoch reference magnitude (default 25.0)",default=25.0)
 parser.add_argument("--matchradius",help="match radius in arcsec for single obj, coadd obj matching (default 0.7)", default=0.7)
+parser.add_argument("--hduforcoaddcat",help="hdu for coadd catalog (default 1)",default=1)
 args=parser.parse_args()
 
 #fetch of catalogs not used now -- assumed to be present in working area
@@ -376,7 +383,7 @@ elems = ['NUMBER','ALPHAWIN_J2000','DELTAWIN_J2000','SPREAD_MODEL','SPREADERR_MO
 
 hdrelems = ['BAND','CCDNUM','EXPNUM']
 
-(cd,cindex) = readcoaddcat(args.dircoaddcat+'/'+args.incoaddcat,elems)
+(cd,cindex) = readcoaddcat(args.dircoaddcat+'/'+args.incoaddcat,elems,args.hduforcoaddcat)
 
 (od,oindex) = readlists(args.catlists,args.sublistdirprefix,elems,hdrelems)
 
