@@ -42,6 +42,7 @@ def readcoaddcat(filename,elems,hduforcoaddcat):
   cd['NEPOCHS']=[0]*len(cd['RA'])
   cd['WAVG_MAG_PSF']=t['MAG_PSF']
   cd['WAVG_MAGERR_PSF']=t['MAGERR_PSF']
+  cd['WAVG_MAGRMS_PSF']=t['MAGERR_PSF']+0.0
   cd['WAVG_SPREAD_MODEL']=t['SPREAD_MODEL']
   cd['WAVG_SPREADERR_MODEL']=t['SPREADERR_MODEL']
 
@@ -63,7 +64,7 @@ def readcoaddcat(filename,elems,hduforcoaddcat):
 
   return (cd,cindex)
 
-def readlists(lists,sublistdirprefix,elems,hdrelems):
+def readlists(lists,sublistdirprefix,elems,hdrelems,urall,uraur,udecll,udecur):
 	od={}
 	for e in elems+hdrelems:
 	 od[e] = []
@@ -71,6 +72,7 @@ def readlists(lists,sublistdirprefix,elems,hdrelems):
 	od['FILENAME'] = []
 	od['MAG_ZERO'] = []
 	od['COADD_NUMBER'] = []
+	od['DUP'] = []
 
         alllists=lists.split(',')
         for list in alllists:
@@ -120,6 +122,7 @@ def readlists(lists,sublistdirprefix,elems,hdrelems):
 	   od['FILENAME'] += [filename]*sizetable
 	   od['MAG_ZERO'] += [zeropoint]*sizetable
 	   od['COADD_NUMBER'] += [0]*sizetable
+	   od['DUP'] += [0]*sizetable
 
 	   #print ra,dec,flux_psf
            #print ra[0],dec[0],flux_psf[0],expnum,ccdnum,ra.size,zeropoint,aband
@@ -132,11 +135,31 @@ def readlists(lists,sublistdirprefix,elems,hdrelems):
           nra = numpy.array(od['ALPHAWIN_J2000'])
 	  oindex = nra.argsort()
 
+	  if (float(urall) > -1 and float(urall) > 350 and float(uraur) < 10):
+            uurall = float(urall)-360.0
+            uuraur = float(uraur)
+            uudecll = float(udecll)
+	    uudecur = float(udecur)
+          else:
+            uurall = float(urall)
+            uuraur = float(uraur)
+            uudecll = float(udecll)
+	    uudecur = float(udecur)
+
 	  #don't forget about the RA-360 for RA>350 wraparound.
   	  if od['ALPHAWIN_J2000'][oindex[0]] < 10 and od['ALPHAWIN_J2000'][oindex[len(oindex)-1]] > 350:
 	     od['RA'] = od['ALPHAWIN_J2000'] if od['ALPHAWIN_J2000'] < 350 else od['ALPHAWIN_J2000'] - 360.0
 
+
+	  if (float(urall) > -1):
+	   lll=len(od['RA'])
+           for ee in range(0,lll):
+	     if (od['RA'][ee] < uurall or od['RA'][ee] > uuraur or od['DELTAWIN_J2000'][ee] < uudecll or od['DELTAWIN_J2000'][ee] > uudecur):
+		od['DUP'][ee] = 1
+             
+	
           nra = numpy.array(od['RA'])
+
 	  oindex = nra.argsort()
 
 	  #print od['RA'][oindex[0]],od['RA'][oindex[1]],od['RA'][oindex[100000]]
@@ -182,6 +205,7 @@ def solvsort(cd,cindex,od,oindex,refmag0,matchradius):
     oneset['FLAGS'] = []
     oneset['MAG_PSF'] = []
     oneset['MAGERR_PSF'] = []
+    oneset['MAGRMS_PSF'] = []
     oneset['SPREAD_MODEL'] = []
     oneset['SPREADERR_MODEL'] = []
     oneset['MAG_ZERO'] = []
@@ -212,6 +236,7 @@ def solvsort(cd,cindex,od,oindex,refmag0,matchradius):
 	  oneset['FLAGS'] += [od['FLAGS'][oindex[curo]]]
 	  oneset['MAG_PSF'] += [od['MAG_PSF'][oindex[curo]]]
 	  oneset['MAGERR_PSF'] += [od['MAGERR_PSF'][oindex[curo]]]
+	  oneset['MAGRMS_PSF'] += [od['MAGERR_PSF'][oindex[curo]]]
 	  oneset['SPREAD_MODEL'] += [od['SPREAD_MODEL'][oindex[curo]]]
 	  oneset['SPREADERR_MODEL'] += [od['SPREADERR_MODEL'][oindex[curo]]]
 	  oneset['MAG_ZERO'] += [od['MAG_ZERO'][oindex[curo]]]
@@ -219,12 +244,12 @@ def solvsort(cd,cindex,od,oindex,refmag0,matchradius):
       curo += 1
  
     #here's where we compute the wavg numbers with this for this coadd object current set.
-    (n,wavg_mag_psf,wavg_magerr_psf,wavg_spread_model,wavg_spreaderr_model) =onebanderrs(oneset,refmag0)
-    #print n,wavg_mag_psf,wavg_magerr_psf,wavg_spread_model,wavg_spreaderr_model
+    (n,wavg_mag_psf,wavg_magerr_psf,wavg_magrms_psf,wavg_spread_model,wavg_spreaderr_model) =onebanderrs(oneset,refmag0)
     if n>0:
       #print '0',cd['MAG_PSF'][cindex[curc]],cd['MAGERR_PSF'][cindex[curc]], cd['SPREAD_MODEL'][cindex[curc]],cd['SPREADERR_MODEL'][cindex[curc]]
       cd['WAVG_MAG_PSF'][cindex[curc]] = wavg_mag_psf
       cd['WAVG_MAGERR_PSF'][cindex[curc]] = wavg_magerr_psf
+      cd['WAVG_MAGRMS_PSF'][cindex[curc]] = wavg_magrms_psf
       cd['WAVG_SPREAD_MODEL'][cindex[curc]] = wavg_spread_model
       cd['WAVG_SPREADERR_MODEL'][cindex[curc]] = wavg_spreaderr_model
     curc += 1
@@ -252,11 +277,12 @@ def joinup(cd,cindex,od,oindex,outcoaddname,outocname,coaddcat):
   nrows=cd['NUMBER'].size
   band=od['BAND'][0]
 
-  outdata=numpy.zeros(nrows,dtype=[('NUMBER','i4'),('NEPOCHS','i4'),('WAVG_MAG_PSF','f4'),('WAVG_MAGERR_PSF','f4'),('WAVG_SPREAD_MODEL','f4'),('WAVG_SPREADERR_MODEL','f4')])
+  outdata=numpy.zeros(nrows,dtype=[('NUMBER','i4'),('NEPOCHS','i4'),('WAVG_MAG_PSF','f4'),('WAVG_MAGERR_PSF','f4'),('WAVG_MAGRMS_PSF','f4'),('WAVG_SPREAD_MODEL','f4'),('WAVG_SPREADERR_MODEL','f4')])
   outdata['NUMBER']=cd['NUMBER']
   outdata['NEPOCHS']=cd['NEPOCHS']
   outdata['WAVG_MAG_PSF']=cd['WAVG_MAG_PSF']
   outdata['WAVG_MAGERR_PSF']=cd['WAVG_MAGERR_PSF']
+  outdata['WAVG_MAGRMS_PSF']=cd['WAVG_MAGRMS_PSF']
   outdata['WAVG_SPREAD_MODEL']=cd['WAVG_SPREAD_MODEL']
   outdata['WAVG_SPREADERR_MODEL']=cd['WAVG_SPREADERR_MODEL']
 
@@ -272,15 +298,18 @@ def joinup(cd,cindex,od,oindex,outcoaddname,outocname,coaddcat):
   neoid=no[numpy.where(ne!=0)]
   nf=numpy.array(od['FILENAME'])
   nfid=nf[numpy.where(ne!=0)]
+  ndup=numpy.array(od['DUP'])
+  ndupid=ndup[numpy.where(ne!=0)]
 
   print "SE Objects with non-null coadd_number:",ne[numpy.where(ne!=0)].size
 
   nocrows=necid.size
-  outocdata=numpy.zeros(nocrows,dtype=[('COADD_FILENAME','a72'),('COADD_NUMBER','i4'),('FILENAME','a60'),('NUMBER','i4')])
+  outocdata=numpy.zeros(nocrows,dtype=[('COADD_FILENAME','a72'),('COADD_NUMBER','i4'),('FILENAME','a60'),('NUMBER','i4'),('DUP','i4')])
   outocdata['COADD_FILENAME']=[coaddcat]*nocrows
   outocdata['COADD_NUMBER']=necid
   outocdata['FILENAME']=nfid
   outocdata['NUMBER']=neoid
+  outocdata['DUP']=ndupid
   fitsio.write(outocname,outocdata,extname='OBJECTS',header=fhdr,clobber=True)
 
 def onebanderrs(workdict,refmag0):
@@ -301,6 +330,9 @@ def onebanderrs(workdict,refmag0):
  smweight_sum = 0.0
  smsum_weights = 0.0
  smsumsq_weights = 0.0
+
+ error_sum = 0.0
+ error_smsum = 0.0
 
  #print 'here:',len(workdict['FLAGS'])
  flagarr=numpy.array(workdict['FLAGS'])
@@ -328,6 +360,8 @@ def onebanderrs(workdict,refmag0):
      sum_weights += wpsf
      sumsq_weights += wpsf*wpsf
 
+     error_sum += epsf*epsf
+
      sm.append(sm0)
      sme.append(sme0)
      smw.append(smw0)
@@ -335,32 +369,36 @@ def onebanderrs(workdict,refmag0):
      smsum_weights += smw0
      smsumsq_weights += smw0*smw0
 
+     error_smsum += sme0*sme0
+
      cnt += 1
  
  n=cnt
  #print cnt,n
  if n==1:
-  return (1,mpsf,epsf,sm0,sme0)
+  return (1,mpsf,epsf,epsf,sm0,sme0)
  if n>0:
   wavg = weight_sum/sum_weights
   weighted_devsq = 0
+  weighted_sigma = numpy.sqrt(error_sum)/float(n)
 
   smwavg = smweight_sum/smsum_weights
   smweighted_devsq = 0
+  smweighted_sigma = numpy.sqrt(error_smsum)/float(n)
 
   for i in range(0,n):
    weighted_devsq += (m[i]-wavg)*(m[i]-wavg)*w[i]
    smweighted_devsq += (sm[i]-smwavg)*(sm[i]-smwavg)*smw[i]
 
-  weighted_sigma = math.sqrt(weighted_devsq/(sum_weights-(sumsq_weights/sum_weights)))
-  smweighted_sigma = math.sqrt(smweighted_devsq/(smsum_weights-(smsumsq_weights/smsum_weights)))
+  weighted_rms = math.sqrt(weighted_devsq/(sum_weights-(sumsq_weights/sum_weights)))
+  smweighted_rms = math.sqrt(smweighted_devsq/(smsum_weights-(smsumsq_weights/smsum_weights)))
  
   #print "n,weighted average,weighted_sigma:",n,wavg,weighted_sigma
 
-  return  (n,wavg,weighted_sigma,smwavg,smweighted_sigma)
+  return  (n,wavg,weighted_sigma,weighted_rms,smwavg,smweighted_sigma)
 
  else:
-  return  (0,0,0,0,0)
+  return  (0,0,0,0,0,0)
 
 #END OF ONEBANDERRS
 
@@ -369,6 +407,10 @@ parser.add_argument("incoaddcat",help="Filename of the input coadd fits catalog 
 parser.add_argument("catlists",help="List(s) of single epoch catalogs overlapping the tile.")
 parser.add_argument("outwavgcat",help="filename of the output fits file with wavg quantities.")
 parser.add_argument("outoclinkcat",help="filename of the output fits file with coadd_object ids for each object id that matches a coadd_object.")
+parser.add_argument("--urall",help="unique ra lower left (deg)",default=-1.0)
+parser.add_argument("--uraur",help="unique ra upper right (deg)",default=-1.0)
+parser.add_argument("--udecll",help="unique dec lower left (deg)",default=-1.0)
+parser.add_argument("--udecur",help="unique dec upper right (deg)",default=-1.0)
 parser.add_argument("--dircoaddcat",help="directory containing the coadd catalog file (defaults to current dir .)",default=".")
 parser.add_argument("--sublistdirprefix",help="perform a substitution on the list directory changing red/ to sublistdirprefix/cat/ and immasked --> red-fullcat containing the coadd catalog file (defaults to no substitution in list)",default="none")
 parser.add_argument("--refmag0",help="sextractor single epoch reference magnitude (default 25.0)",default=25.0)
@@ -385,7 +427,7 @@ hdrelems = ['BAND','CCDNUM','EXPNUM']
 
 (cd,cindex) = readcoaddcat(args.dircoaddcat+'/'+args.incoaddcat,elems,args.hduforcoaddcat)
 
-(od,oindex) = readlists(args.catlists,args.sublistdirprefix,elems,hdrelems)
+(od,oindex) = readlists(args.catlists,args.sublistdirprefix,elems,hdrelems,args.urall,args.uraur,args.udecll,args.udecur)
 
 solvsort(cd,cindex,od,oindex,args.refmag0,args.matchradius)
 joinup(cd,cindex,od,oindex,args.outwavgcat,args.outoclinkcat,args.incoaddcat)
