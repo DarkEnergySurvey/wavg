@@ -320,10 +320,10 @@ def onebanderrs(workdict,refmag0):
  sm=[]
  sme=[]
  smw=[]
- #c=0.01	#error floor
- c=0.0
- #smc=0.00001
- smc=0.0
+ c=0.001	#error floor
+ #c=0.0
+ smc=0.000001
+ #smc=0.0
  cnt=0
  weight_sum = 0.0
  sum_weights = 0.0
