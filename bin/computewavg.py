@@ -27,7 +27,7 @@ def grabredfullcats(list):
    subprocess.check_output(['wget',getname])
    
 
-def readcoaddcat(filename,elems,hduforcoaddcat):
+def readcoaddcat(filename,elems,hduforcoaddcat,urall,uraur,udecll,udecur):
 
   f=fitsio.FITS(filename,namemode='r')
   #This may have to be changed from HDU=1 to HDU=2
@@ -45,6 +45,7 @@ def readcoaddcat(filename,elems,hduforcoaddcat):
   cd['WAVG_MAGRMS_PSF']=t['MAGERR_PSF']+0.0
   cd['WAVG_SPREAD_MODEL']=t['SPREAD_MODEL']
   cd['WAVG_SPREADERR_MODEL']=t['SPREADERR_MODEL']
+  cd['DUP']=[0]*len(cd['RA'])
 
   cindex=cd['ALPHAWIN_J2000'].argsort()
 
@@ -52,6 +53,24 @@ def readcoaddcat(filename,elems,hduforcoaddcat):
 
   if cd['ALPHAWIN_J2000'][cindex[0]] < 10 and cd['ALPHAWIN_J2000'][cindex[len(cindex)-1]] > 350:
 	cd['RA'] = cd['ALPHAWIN_J2000'] if cd['ALPHAWIN_J2000'] < 350 else cd['ALPHAWIN_J2000'] - 360.0
+
+  if (float(urall) > -1 and float(urall) > 350 and float(uraur) < 10):
+    uurall = float(urall)-360.0
+    uuraur = float(uraur)
+    uudecll = float(udecll)
+    uudecur = float(udecur)
+  else:
+    uurall = float(urall)
+    uuraur = float(uraur)
+    uudecll = float(udecll)
+    uudecur = float(udecur)
+
+  if (float(urall) > -1):
+   lll=len(cd['RA'])
+   for ee in range(0,lll):
+     if (cd['RA'][ee] < uurall or cd['RA'][ee] > uuraur or cd['DELTAWIN_J2000'][ee] < uudecll or cd['DELTAWIN_J2000'][ee] > uudecur):
+	cd['DUP'][ee] = 1
+
 
   cindex=cd['RA'].argsort()
 
@@ -277,7 +296,7 @@ def joinup(cd,cindex,od,oindex,outcoaddname,outocname,coaddcat):
   nrows=cd['NUMBER'].size
   band=od['BAND'][0]
 
-  outdata=numpy.zeros(nrows,dtype=[('NUMBER','i4'),('NEPOCHS','i4'),('WAVG_MAG_PSF','f4'),('WAVG_MAGERR_PSF','f4'),('WAVG_MAGRMS_PSF','f4'),('WAVG_SPREAD_MODEL','f4'),('WAVG_SPREADERR_MODEL','f4')])
+  outdata=numpy.zeros(nrows,dtype=[('NUMBER','i4'),('NEPOCHS','i4'),('WAVG_MAG_PSF','f4'),('WAVG_MAGERR_PSF','f4'),('WAVG_MAGRMS_PSF','f4'),('WAVG_SPREAD_MODEL','f4'),('WAVG_SPREADERR_MODEL','f4'),('DUP','i4')])
   outdata['NUMBER']=cd['NUMBER']
   outdata['NEPOCHS']=cd['NEPOCHS']
   outdata['WAVG_MAG_PSF']=cd['WAVG_MAG_PSF']
@@ -285,6 +304,7 @@ def joinup(cd,cindex,od,oindex,outcoaddname,outocname,coaddcat):
   outdata['WAVG_MAGRMS_PSF']=cd['WAVG_MAGRMS_PSF']
   outdata['WAVG_SPREAD_MODEL']=cd['WAVG_SPREAD_MODEL']
   outdata['WAVG_SPREADERR_MODEL']=cd['WAVG_SPREADERR_MODEL']
+  outdata['DUP']=cd['DUP']
 
   hlist=[{'name':'BAND','value':band}]
   fhdr=fitsio.FITSHDR(hlist)
@@ -427,7 +447,7 @@ elems = ['NUMBER','ALPHAWIN_J2000','DELTAWIN_J2000','SPREAD_MODEL','SPREADERR_MO
 
 hdrelems = ['BAND','CCDNUM','EXPNUM']
 
-(cd,cindex) = readcoaddcat(args.dircoaddcat+'/'+args.incoaddcat,elems,args.hduforcoaddcat)
+(cd,cindex) = readcoaddcat(args.dircoaddcat+'/'+args.incoaddcat,elems,args.hduforcoaddcat,args.urall,args.uraur,args.udecll,args.udecur)
 
 (od,oindex) = readlists(args.catlists,args.sublistdirprefix,elems,hdrelems,args.urall,args.uraur,args.udecll,args.udecur)
 
