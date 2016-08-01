@@ -40,11 +40,11 @@ def readcoaddcat(filename,elems,hduforcoaddcat,urall,uraur,udecll,udecur):
 
   cd['RA']=cd['ALPHAWIN_J2000']
   cd['NEPOCHS']=[0]*len(cd['RA'])
-  cd['WAVG_MAG_PSF']=t['MAG_PSF']
-  cd['WAVG_MAGERR_PSF']=t['MAGERR_PSF']
+  cd['WAVG_MAG_PSF']=t['MAG_PSF']+0.0
+  cd['WAVG_MAGERR_PSF']=t['MAGERR_PSF']+0.0
   cd['WAVG_MAGRMS_PSF']=t['MAGERR_PSF']+0.0
-  cd['WAVG_SPREAD_MODEL']=t['SPREAD_MODEL']
-  cd['WAVG_SPREADERR_MODEL']=t['SPREADERR_MODEL']
+  cd['WAVG_SPREAD_MODEL']=t['SPREAD_MODEL']+0.0
+  cd['WAVG_SPREADERR_MODEL']=t['SPREADERR_MODEL']+0.0
   cd['DUP']=[0]*len(cd['RA'])
 
   cindex=cd['ALPHAWIN_J2000'].argsort()
@@ -271,6 +271,12 @@ def solvsort(cd,cindex,od,oindex,refmag0,matchradius):
       cd['WAVG_MAGRMS_PSF'][cindex[curc]] = wavg_magrms_psf
       cd['WAVG_SPREAD_MODEL'][cindex[curc]] = wavg_spread_model
       cd['WAVG_SPREADERR_MODEL'][cindex[curc]] = wavg_spreaderr_model
+    else:
+      cd['WAVG_MAG_PSF'][cindex[curc]] = -99
+      cd['WAVG_MAGERR_PSF'][cindex[curc]] = -99
+      cd['WAVG_MAGRMS_PSF'][cindex[curc]] = -99
+      cd['WAVG_SPREAD_MODEL'][cindex[curc]] = -99
+      cd['WAVG_SPREADERR_MODEL'][cindex[curc]] = -99
     curc += 1
       
   print "Number of SE objects matched to a Coadd object:",totmatches
