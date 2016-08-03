@@ -52,7 +52,12 @@ def readcoaddcat(filename,elems,hduforcoaddcat,urall,uraur,udecll,udecur):
   #don't forget about the RA> 350 -360 wraparound
 
   if cd['ALPHAWIN_J2000'][cindex[0]] < 10 and cd['ALPHAWIN_J2000'][cindex[len(cindex)-1]] > 350:
-	cd['RA'] = cd['ALPHAWIN_J2000'] if cd['ALPHAWIN_J2000'] < 350 else cd['ALPHAWIN_J2000'] - 360.0
+        for ii in range(0,len(cd['RA'])):
+	  if cd['ALPHAWIN_J2000'][ii] >= 350:
+		cd['RA'][ii] = cd['ALPHAWIN_J2000'][ii] - 360.0
+            
+	#this syntax doesn't work for some reason
+	#cd['RA'] = cd['ALPHAWIN_J2000'] if cd['ALPHAWIN_J2000'] < 350 else cd['ALPHAWIN_J2000'] - 360.0
 
   if (float(urall) > -1 and float(urall) > 350 and float(uraur) < 10):
     uurall = float(urall)-360.0
@@ -167,7 +172,11 @@ def readlists(lists,sublistdirprefix,elems,hdrelems,urall,uraur,udecll,udecur):
 
 	  #don't forget about the RA-360 for RA>350 wraparound.
   	  if od['ALPHAWIN_J2000'][oindex[0]] < 10 and od['ALPHAWIN_J2000'][oindex[len(oindex)-1]] > 350:
-	     od['RA'] = od['ALPHAWIN_J2000'] if od['ALPHAWIN_J2000'] < 350 else od['ALPHAWIN_J2000'] - 360.0
+             for ii in range(0,len(od['RA'])):
+	       if od['ALPHAWIN_J2000'][ii] >= 350:
+		 od['RA'][ii] = od['ALPHAWIN_J2000'][ii] - 360.0
+
+	     #od['RA'] = od['ALPHAWIN_J2000'] if od['ALPHAWIN_J2000'] < 350 else od['ALPHAWIN_J2000'] - 360.0
 
 
 	  if (float(urall) > -1):
