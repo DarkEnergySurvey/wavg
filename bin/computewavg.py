@@ -240,6 +240,9 @@ def solvsort(cd,cindex,od,oindex,refmag0,matchradius):
 
     while 1:
 
+      if curo >= osize:
+	break
+
       ora=od['RA'][oindex[curo]]
       odec=od['DELTAWIN_J2000'][oindex[curo]]
 
@@ -248,7 +251,7 @@ def solvsort(cd,cindex,od,oindex,refmag0,matchradius):
       if delra > tol2:
         topo += 1
         curo += 1
-
+ 
       if delra < -tol2:
         break
 
