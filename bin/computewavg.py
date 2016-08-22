@@ -240,7 +240,7 @@ def solvsort(cd,cindex,od,oindex,refmag0,matchradius):
 
     while 1:
 
-      if curo >= osize:
+      if curo >= sizeo:
 	break
 
       ora=od['RA'][oindex[curo]]
