@@ -342,11 +342,11 @@ def joinup(cd,cindex,od,oindex,outcoaddname,outocname,coaddcat):
   print "SE Objects with non-null coadd_number:",ne[numpy.where(ne!=0)].size
 
   nocrows=necid.size
-  outocdata=numpy.zeros(nocrows,dtype=[('COADD_FILENAME','a72'),('NUMBER','i4'),('FILENAME','a60'),('SE_NUMBER','i4'),('DUP','i4')])
+  outocdata=numpy.zeros(nocrows,dtype=[('COADD_FILENAME','a72'),('NUMBER','i4'),('FILENAME','a60'),('SE_OBJECT_NUMBER','i4'),('DUP','i4')])
   outocdata['COADD_FILENAME']=[coaddcat]*nocrows
   outocdata['NUMBER']=necid
   outocdata['FILENAME']=nfid
-  outocdata['SE_NUMBER']=neoid
+  outocdata['SE_OBJECT_NUMBER']=neoid
   outocdata['DUP']=ndupid
   fitsio.write(outocname,outocdata,extname='OBJECTS',header=fhdr,clobber=True)
 
