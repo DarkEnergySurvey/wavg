@@ -40,11 +40,16 @@ def readcoaddcat(filename,elems,hduforcoaddcat,urall,uraur,udecll,udecur):
 
   cd['RA']=cd['ALPHAWIN_J2000']
   cd['NEPOCHS']=[0]*len(cd['RA'])
-  cd['WAVG_MAG_PSF']=t['MAG_PSF']+0.0
-  cd['WAVG_MAGERR_PSF']=t['MAGERR_PSF']+0.0
-  cd['WAVG_MAGRMS_PSF']=t['MAGERR_PSF']+0.0
-  cd['WAVG_SPREAD_MODEL']=t['SPREAD_MODEL']+0.0
-  cd['WAVG_SPREADERR_MODEL']=t['SPREADERR_MODEL']+0.0
+  #cd['WAVG_MAG_PSF']=t['MAG_PSF']+0.0
+  #cd['WAVG_MAGERR_PSF']=t['MAGERR_PSF']+0.0
+  #cd['WAVG_MAGRMS_PSF']=t['MAGERR_PSF']+0.0
+  #cd['WAVG_SPREAD_MODEL']=t['SPREAD_MODEL']+0.0
+  #cd['WAVG_SPREADERR_MODEL']=t['SPREADERR_MODEL']+0.0
+  cd['WAVG_MAG_PSF']=[-99.0]*len(cd['RA'])
+  cd['WAVG_MAGERR_PSF']=[-99.0]*len(cd['RA'])
+  cd['WAVG_MAGRMS_PSF']=[-99.0]*len(cd['RA'])
+  cd['WAVG_SPREAD_MODEL']=[-99.0]*len(cd['RA'])
+  cd['WAVG_SPREADERR_MODEL']=[-99.0]*len(cd['RA'])
   cd['DUP']=[0]*len(cd['RA'])
 
   cindex=cd['ALPHAWIN_J2000'].argsort()
